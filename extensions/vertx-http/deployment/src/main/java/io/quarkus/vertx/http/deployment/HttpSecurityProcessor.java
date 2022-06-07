@@ -18,20 +18,7 @@ import io.quarkus.deployment.annotations.ExecutionTime;
 import io.quarkus.deployment.annotations.Record;
 import io.quarkus.vertx.http.runtime.HttpBuildTimeConfig;
 import io.quarkus.vertx.http.runtime.PolicyConfig;
-import io.quarkus.vertx.http.runtime.security.AuthenticatedHttpSecurityPolicy;
-import io.quarkus.vertx.http.runtime.security.BasicAuthenticationMechanism;
-import io.quarkus.vertx.http.runtime.security.DenySecurityPolicy;
-import io.quarkus.vertx.http.runtime.security.FormAuthenticationMechanism;
-import io.quarkus.vertx.http.runtime.security.HttpAuthenticationMechanism;
-import io.quarkus.vertx.http.runtime.security.HttpAuthenticator;
-import io.quarkus.vertx.http.runtime.security.HttpAuthorizer;
-import io.quarkus.vertx.http.runtime.security.HttpSecurityPolicy;
-import io.quarkus.vertx.http.runtime.security.HttpSecurityRecorder;
-import io.quarkus.vertx.http.runtime.security.MtlsAuthenticationMechanism;
-import io.quarkus.vertx.http.runtime.security.PathMatchingHttpSecurityPolicy;
-import io.quarkus.vertx.http.runtime.security.PermitSecurityPolicy;
-import io.quarkus.vertx.http.runtime.security.RolesAllowedHttpSecurityPolicy;
-import io.quarkus.vertx.http.runtime.security.SupplierImpl;
+import io.quarkus.vertx.http.runtime.security.*;
 import io.vertx.core.http.ClientAuth;
 
 public class HttpSecurityProcessor {
@@ -146,7 +133,7 @@ public class HttpSecurityProcessor {
         if (capabilities.isPresent(Capability.SECURITY)) {
             beanProducer
                     .produce(AdditionalBeanBuildItem.builder().setUnremovable().addBeanClass(HttpAuthenticator.class)
-                            .addBeanClass(HttpAuthorizer.class).build());
+                            .addBeanClass(HttpAuthorizer.class).addBeanClass(AuthenticationAwareProcessor.class).build());
             filterBuildItemBuildProducer
                     .produce(new FilterBuildItem(
                             recorder.authenticationMechanismHandler(buildTimeConfig.auth.proactive),

@@ -60,14 +60,19 @@ public class HttpSecurityRecorder {
         return new Handler<RoutingContext>() {
 
             volatile HttpAuthenticator authenticator;
+            volatile AuthenticationAwareProcessor authenticationAwareProcessor;
 
             @Override
             public void handle(RoutingContext event) {
                 if (authenticator == null) {
                     authenticator = CDI.current().select(HttpAuthenticator.class).get();
                 }
+                if (authenticationAwareProcessor == null) {
+                    authenticationAwareProcessor = CDI.current().select(AuthenticationAwareProcessor.class).get();
+                }
                 //we put the authenticator into the routing context so it can be used by other systems
                 event.put(HttpAuthenticator.class.getName(), authenticator);
+                event.put(AuthenticationAwareProcessor.class.getName(), authenticationAwareProcessor);
 
                 //register the default auth failure handler
                 //if proactive auth is used this is the only one
@@ -76,6 +81,7 @@ public class HttpSecurityRecorder {
                     @Override
                     public void accept(RoutingContext routingContext, Throwable throwable) {
                         throwable = extractRootCause(throwable);
+                        authenticationAwareProcessor.processFail(event, throwable);
                         //auth failed
                         if (throwable instanceof AuthenticationFailedException) {
                             authenticator.sendChallenge(event).subscribe().with(new Consumer<Boolean>() {
@@ -106,7 +112,7 @@ public class HttpSecurityRecorder {
                         }
                     }
                 });
-
+                authenticationAwareProcessor.processBefore(event);
                 Uni<SecurityIdentity> potentialUser = authenticator.attemptAuthentication(event).memoize().indefinitely();
                 if (proactiveAuthentication) {
                     potentialUser
@@ -175,6 +181,7 @@ public class HttpSecurityRecorder {
                                         return authenticator.getIdentityProviderManager()
                                                 .authenticate(AnonymousAuthenticationRequest.INSTANCE);
                                     }
+                                    authenticationAwareProcessor.processAfter(event);
                                     return Uni.createFrom().item(securityIdentity);
                                 }
                             }).onTermination().invoke(new Functions.TriConsumer<SecurityIdentity, Throwable, Boolean>() {
